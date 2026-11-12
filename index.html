@@ -1,0 +1,831 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Image to Font</title>
+<meta name="description" content="Turn a picture of letters or numbers into an installable .ttf font, entirely in your browser.">
+<style>
+:root{
+  --bg:#f7f6f2; --fg:#1c1c1a; --mut:#66665f; --card:#ffffff; --line:#dcdad2;
+  --acc:#1f4fd8; --accfg:#ffffff; --bad:#b3261e; --ok:#1b7a3d; --warn:#9a5b00;
+  --field:#fbfaf7;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#151514; --fg:#ecebe6; --mut:#a19f95; --card:#1e1e1c; --line:#363530;
+    --acc:#7da2ff; --accfg:#0b1020; --bad:#ff8a80; --ok:#7bd88f; --warn:#f0b866;
+    --field:#171716;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:28px 16px 64px}
+h1{font-size:28px;line-height:1.15;margin:0 0 6px;letter-spacing:-.01em}
+.sub{color:var(--mut);margin:0 0 24px;max-width:62ch}
+.grid{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card + .card{margin-top:16px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:0 0 10px;font-weight:600}
+.drop{display:block;border:2px dashed var(--line);border-radius:10px;padding:22px 12px;text-align:center;cursor:pointer;background:var(--field);color:var(--mut)}
+.drop.over,.drop:focus-visible{border-color:var(--acc);outline:none;color:var(--fg)}
+.drop strong{color:var(--fg)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button,.btn{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--fg);padding:8px 14px;border-radius:8px;cursor:pointer}
+button:hover{border-color:var(--acc)}
+button.primary{background:var(--acc);border-color:var(--acc);color:var(--accfg);font-weight:600}
+button.primary[disabled]{opacity:.45;cursor:not-allowed}
+button.small{padding:4px 10px;font-size:14px}
+textarea,input[type=text],input[type=number]{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--field);color:var(--fg)}
+textarea{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;resize:vertical;min-height:96px;white-space:pre;overflow:auto}
+label{display:block;font-size:14px;color:var(--mut);margin:12px 0 4px}
+label.chk{display:flex;gap:8px;align-items:center;color:var(--fg);margin:10px 0 0}
+input[type=range]{width:100%}
+.hint{font-size:13px;color:var(--mut);margin:6px 0 0}
+details summary{cursor:pointer;font-weight:600;font-size:14px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.val{float:right;color:var(--fg);font-variant-numeric:tabular-nums}
+.status{padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--field);font-size:14px;margin-bottom:12px}
+.status.ok{border-color:var(--ok);color:var(--ok)}
+.status.bad{border-color:var(--bad);color:var(--bad)}
+.status.warn{border-color:var(--warn);color:var(--warn)}
+.viewbox{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;line-height:0}
+canvas#view{width:100%;height:auto;display:block;cursor:crosshair;touch-action:none}
+.empty{padding:48px 16px;text-align:center;color:var(--mut);line-height:1.5}
+#sample{width:100%;font-size:56px;line-height:1.25;min-height:84px;padding:8px 10px;resize:vertical;white-space:pre-wrap;font-family:system-ui}
+.glyphs{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;margin-top:12px}
+.g{border:1px solid var(--line);border-radius:8px;text-align:center;padding:6px 0 2px;background:var(--field)}
+.g span{display:block;font-size:44px;line-height:1.35}
+.g small{color:var(--mut);font-size:11px}
+.dl{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.note{font-size:13px;color:var(--mut)}
+a{color:var(--acc)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Image to Font</h1>
+  <p class="sub">Upload a picture of letters or numbers and get an installable <b>.ttf</b> font. Everything runs in your browser; your image is never uploaded.</p>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>1. Image</h2>
+        <label class="drop" id="drop" tabindex="0">
+          <input type="file" id="file" accept="image/*" hidden>
+          <strong>Choose an image</strong> or drop it here<br><span class="hint">PNG or JPG, dark shapes on a light background</span>
+        </label>
+        <div class="row" style="margin-top:10px">
+          <button id="demo" class="small" type="button">Try a demo sheet</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>2. What is on the sheet?</h2>
+        <textarea id="chars" spellcheck="false" aria-label="Characters on the sheet">ABCDEFGHIJKLM
+NOPQRSTUVWXYZ
+abcdefghijklm
+nopqrstuvwxyz
+0123456789</textarea>
+        <p class="hint">One line per row of the picture, left to right, top to bottom. No spaces. If a letter is listed twice, the later one is kept.</p>
+      </div>
+
+      <div class="card">
+        <h2>3. Fine-tune</h2>
+        <label for="thr">Darkness cut-off <span class="val" id="thrVal">128</span></label>
+        <input type="range" id="thr" min="1" max="254" value="128">
+        <div class="row" style="margin-top:6px">
+          <button id="auto" class="small" type="button">Auto</button>
+          <label class="chk" style="margin:0"><input type="checkbox" id="invert"> Light shapes on dark</label>
+        </div>
+
+        <details style="margin-top:14px">
+          <summary>More settings</summary>
+          <label for="smooth">Edge smoothing <span class="val" id="smoothVal">2</span></label>
+          <input type="range" id="smooth" min="0" max="5" value="2">
+          <label for="simplify">Outline detail (lower = more points) <span class="val" id="simplifyVal">0.30</span></label>
+          <input type="range" id="simplify" min="0" max="1.5" step="0.05" value="0.3">
+          <div class="two">
+            <div><label for="minSpeck">Ignore specks under (px²)</label><input type="number" id="minSpeck" value="12" min="0"></div>
+            <div><label for="minHole">Ignore holes under (px²)</label><input type="number" id="minHole" value="6" min="0"></div>
+            <div><label for="cap">Capital height (font units)</label><input type="number" id="cap" value="700" min="100" max="900"></div>
+            <div><label for="bearing">Side spacing (units)</label><input type="number" id="bearing" value="30" min="0" max="300"></div>
+          </div>
+          <label class="chk"><input type="checkbox" id="shared" checked> Letters in a row share one baseline</label>
+          <label for="desc">Letters that hang below the baseline</label>
+          <input type="text" id="desc" value="gjpqy" spellcheck="false">
+          <label for="name">Font name</label>
+          <input type="text" id="name" value="MyTracedFont" spellcheck="false">
+        </details>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Detected shapes</h2>
+        <div id="status" class="status">Choose an image to begin, or try the demo sheet.</div>
+        <div class="viewbox" id="viewbox"><div class="empty" id="empty">Your image will appear here.</div><canvas id="view" hidden></canvas></div>
+        <p class="hint" id="cropHint">Blue boxes are matched letters. If the sheet also has a title or captions, drag a box on the picture around just the letters.
+          <button id="clearCrop" class="small" type="button" hidden>Clear selection</button></p>
+      </div>
+
+      <div class="card">
+        <h2>Your font</h2>
+        <textarea id="sample" rows="2" spellcheck="false" aria-label="Type to preview the font">Hello World 123</textarea>
+        <div class="glyphs" id="glyphs"></div>
+        <div class="dl">
+          <button id="download" class="primary" type="button" disabled>Download .ttf</button>
+          <span class="note" id="dlnote">Build a font first.</span>
+        </div>
+        <p class="note">To install: open the downloaded file and choose Install (Windows / macOS), or add it in Font Book. Only use artwork you have the right to turn into a font.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+
+const S = { gray0:null, w:0, h:0, crop:null, runId:0, fontBuf:null, fam:null, info:null, timer:null, fontCount:0 };
+
+/* ---------------------------------------------------------------- image in */
+function loadDrawable(src, w, h){
+  const MAX = 3000, k = Math.min(1, MAX / Math.max(w, h));
+  const cw = Math.max(1, Math.round(w * k)), ch = Math.max(1, Math.round(h * k));
+  const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+  const g = c.getContext('2d', { willReadFrequently:true });
+  g.fillStyle = '#fff'; g.fillRect(0, 0, cw, ch);   // transparent PNGs sit on white
+  g.drawImage(src, 0, 0, cw, ch);
+  const d = g.getImageData(0, 0, cw, ch).data;
+  const gray = new Uint8Array(cw * ch);
+  for (let i = 0, j = 0; i < gray.length; i++, j += 4) gray[i] = (d[j]*299 + d[j+1]*587 + d[j+2]*114) / 1000 | 0;
+  S.gray0 = gray; S.w = cw; S.h = ch; S.crop = null;
+  // light-on-dark guess from the outer border
+  let sum = 0, n = 0;
+  for (let x = 0; x < cw; x++){ sum += gray[x] + gray[(ch-1)*cw + x]; n += 2; }
+  for (let y = 0; y < ch; y++){ sum += gray[y*cw] + gray[y*cw + cw-1]; n += 2; }
+  $('invert').checked = (sum / n) < 110;
+  autoThreshold();
+  schedule(0);
+}
+async function loadFile(file){
+  try{
+    const url = URL.createObjectURL(file), img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('bad image')); img.src = url; });
+    loadDrawable(img, img.naturalWidth, img.naturalHeight);
+    URL.revokeObjectURL(url);
+  }catch(e){ setStatus('Could not read that file as an image.', 'bad'); }
+}
+function demoSheet(){
+  const rows = ['ABCDEFGHIJKLM','NOPQRSTUVWXYZ','abcdefghijklm','nopqrstuvwxyz','0123456789'];
+  const cell = 96, rowH = 150, c = document.createElement('canvas');
+  c.width = cell * 13 + 40; c.height = rowH * rows.length + 30;
+  const g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = '#111'; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+  g.font = 'bold 80px "Times New Roman", Georgia, "DejaVu Serif", serif';
+  rows.forEach((r, ri) => [...r].forEach((ch, ci) => g.fillText(ch, 20 + cell*ci + cell/2, 25 + rowH*ri + 100)));
+  $('chars').value = rows.join('\n');
+  $('shared').checked = true;
+  loadDrawable(c, c.width, c.height);
+}
+
+/* ----------------------------------------------------------- image analysis */
+function otsuMid(g){
+  const hist = new Float64Array(256);
+  for (let i = 0; i < g.length; i++) hist[g[i]]++;
+  const total = g.length; let sum = 0;
+  for (let i = 0; i < 256; i++) sum += i * hist[i];
+  let sumB = 0, wB = 0, best = -1, thr = 128;
+  for (let t = 0; t < 256; t++){
+    wB += hist[t]; if (!wB) continue;
+    const wF = total - wB; if (!wF) break;
+    sumB += t * hist[t];
+    const mB = sumB / wB, mF = (sum - sumB) / wF, between = wB * wF * (mB - mF) * (mB - mF);
+    if (between > best){ best = between; thr = Math.round((mB + mF) / 2); }
+  }
+  return Math.max(1, Math.min(254, thr));
+}
+function currentGray(){
+  if (!$('invert').checked) return S.gray0;
+  const g = new Uint8Array(S.gray0.length);
+  for (let i = 0; i < g.length; i++) g[i] = 255 - S.gray0[i];
+  return g;
+}
+function autoThreshold(){
+  if (!S.gray0) return;
+  const t = otsuMid(currentGray());
+  $('thr').value = t; $('thrVal').textContent = t;
+}
+
+function labelInk(gray, w, h, thr){
+  const n = w * h, lab = new Int32Array(n), stack = new Int32Array(n), comps = [null];
+  let id = 0;
+  for (let i = 0; i < n; i++){
+    if (lab[i] || gray[i] >= thr) continue;
+    id++; let sp = 0; stack[sp++] = i; lab[i] = id;
+    let minx = w, miny = h, maxx = -1, maxy = -1, area = 0;
+    while (sp){
+      const p = stack[--sp], y = (p / w) | 0, x = p - y * w; area++;
+      if (x < minx) minx = x; if (x > maxx) maxx = x; if (y < miny) miny = y; if (y > maxy) maxy = y;
+      const xa = x > 0 ? x-1 : x, xb = x < w-1 ? x+1 : x, ya = y > 0 ? y-1 : y, yb = y < h-1 ? y+1 : y;
+      for (let yy = ya; yy <= yb; yy++) for (let xx = xa; xx <= xb; xx++){
+        const q = yy * w + xx;
+        if (!lab[q] && gray[q] < thr){ lab[q] = id; stack[sp++] = q; }
+      }
+    }
+    comps.push({ id, minx, miny, maxx, maxy, area });
+  }
+  return { lab, comps };
+}
+
+// Enclosed background regions: used to glue an outlined shape's inner fill to its outer ring.
+function enclosedRegions(gray, w, h, thr, lab){
+  const n = w * h, seen = new Uint8Array(n), stack = new Int32Array(n), out = [];
+  for (let i = 0; i < n; i++){
+    if (seen[i] || gray[i] < thr) continue;
+    let sp = 0; stack[sp++] = i; seen[i] = 1;
+    let minx = w, miny = h, maxx = -1, maxy = -1, border = false, adj = new Set(), cnt = 0;
+    while (sp){
+      const p = stack[--sp], y = (p / w) | 0, x = p - y * w; cnt++;
+      if (x < minx) minx = x; if (x > maxx) maxx = x; if (y < miny) miny = y; if (y > maxy) maxy = y;
+      if (!border && (x === 0 || y === 0 || x === w-1 || y === h-1)){ border = true; adj = null; }
+      const nb = [x > 0 ? p-1 : -1, x < w-1 ? p+1 : -1, y > 0 ? p-w : -1, y < h-1 ? p+w : -1];
+      for (let k = 0; k < 4; k++){
+        const q = nb[k]; if (q < 0) continue;
+        if (gray[q] < thr){ if (adj) adj.add(lab[q]); }
+        else if (!seen[q]){ seen[q] = 1; stack[sp++] = q; }
+      }
+    }
+    // Only thin rings count (the white line inside an outlined letter). A big open area,
+    // such as the inside of a decorative frame, must not glue its contents together.
+    const fill = cnt / ((maxx - minx + 1) * (maxy - miny + 1));
+    if (!border && adj.size > 1 && fill < 0.35) out.push({ minx, miny, maxx, maxy, adj:[...adj] });
+  }
+  return out;
+}
+
+function findGroups(gray, w, h, thr){
+  const { lab, comps } = labelInk(gray, w, h, thr);
+  const parent = Int32Array.from({ length: comps.length }, (_, i) => i);
+  const find = a => { while (parent[a] !== a){ parent[a] = parent[parent[a]]; a = parent[a]; } return a; };
+  const union = (a, b) => { a = find(a); b = find(b); if (a !== b) parent[b] = a; };
+  for (const r of enclosedRegions(gray, w, h, thr, lab)){
+    let par = -1, best = -1;
+    for (const id of r.adj){
+      const c = comps[id];
+      if (c.minx <= r.minx+1 && c.miny <= r.miny+1 && c.maxx >= r.maxx-1 && c.maxy >= r.maxy-1 && c.area > best){ best = c.area; par = id; }
+    }
+    if (par < 0) continue;
+    for (const id of r.adj) if (id !== par) union(par, id);
+  }
+  const map = new Map();
+  for (let i = 1; i < comps.length; i++){
+    const r = find(i), c = comps[i]; let g = map.get(r);
+    if (!g){ g = { ids:[], minx:c.minx, miny:c.miny, maxx:c.maxx, maxy:c.maxy, area:0 }; map.set(r, g); }
+    g.ids.push(i); g.area += c.area;
+    if (c.minx < g.minx) g.minx = c.minx; if (c.miny < g.miny) g.miny = c.miny;
+    if (c.maxx > g.maxx) g.maxx = c.maxx; if (c.maxy > g.maxy) g.maxy = c.maxy;
+  }
+  const groups = [...map.values()];
+  for (const g of groups){ g.cx = (g.minx + g.maxx) / 2; g.cy = (g.miny + g.maxy) / 2; }
+  return { lab, comps, groups };
+}
+
+/* ----------------------------------------------------------------- tracing */
+function blurPass(f, rw, rh){
+  const t = new Float32Array(f.length);
+  for (let y = 0; y < rh; y++) for (let x = 0; x < rw; x++){
+    const i = y*rw + x, a = f[x > 0 ? i-1 : i], b = f[i], c = f[x < rw-1 ? i+1 : i];
+    t[i] = (a + 2*b + c) / 4;
+  }
+  for (let y = 0; y < rh; y++) for (let x = 0; x < rw; x++){
+    const i = y*rw + x, a = t[y > 0 ? i-rw : i], b = t[i], c = t[y < rh-1 ? i+rw : i];
+    f[i] = (a + 2*b + c) / 4;
+  }
+}
+
+// Marching squares with sub-pixel interpolation. Segments are directed so that
+// outer outlines and holes come out with opposite winding.
+function contours(f, rw, rh){
+  const next = new Map();
+  const kh = (x, y) => (y*rw + x) * 2, kv = (x, y) => (y*rw + x) * 2 + 1;
+  for (let y = 0; y < rh-1; y++) for (let x = 0; x < rw-1; x++){
+    const a = f[y*rw+x], b = f[y*rw+x+1], c = f[(y+1)*rw+x+1], d = f[(y+1)*rw+x];
+    const idx = (a > 0 ? 8 : 0) | (b > 0 ? 4 : 0) | (c > 0 ? 2 : 0) | (d > 0 ? 1 : 0);
+    if (idx === 0 || idx === 15) continue;
+    const T = kh(x, y), B = kh(x, y+1), L = kv(x, y), R = kv(x+1, y);
+    switch (idx){
+      case 8:  next.set(T, L); break;   case 4:  next.set(R, T); break;
+      case 2:  next.set(B, R); break;   case 1:  next.set(L, B); break;
+      case 12: next.set(R, L); break;   case 3:  next.set(L, R); break;
+      case 9:  next.set(T, B); break;   case 6:  next.set(B, T); break;
+      case 7:  next.set(L, T); break;   case 11: next.set(T, R); break;
+      case 13: next.set(R, B); break;   case 14: next.set(B, L); break;
+      case 10: if ((a+b+c+d) > 0){ next.set(T, R); next.set(B, L); } else { next.set(T, L); next.set(B, R); } break;
+      case 5:  if ((a+b+c+d) > 0){ next.set(L, T); next.set(R, B); } else { next.set(R, T); next.set(L, B); } break;
+    }
+  }
+  const pt = key => {
+    const e = key & 1, i = key >> 1, x = i % rw, y = (i - x) / rw;
+    if (e === 0){ const a = f[y*rw+x], b = f[y*rw+x+1]; return [x + a/(a-b), y]; }
+    const a = f[y*rw+x], b = f[(y+1)*rw+x]; return [x, y + a/(a-b)];
+  };
+  const used = new Set(), loops = [];
+  for (const start of next.keys()){
+    if (used.has(start)) continue;
+    const pts = []; let k = start;
+    while (k !== undefined && !used.has(k)){ used.add(k); pts.push(pt(k)); k = next.get(k); }
+    if (pts.length >= 3) loops.push(pts);
+  }
+  return loops;
+}
+
+function perp(p, a, b){
+  const dx = b[0]-a[0], dy = b[1]-a[1], l2 = dx*dx + dy*dy;
+  if (!l2) return Math.hypot(p[0]-a[0], p[1]-a[1]);
+  return Math.abs((p[0]-a[0])*dy - (p[1]-a[1])*dx) / Math.sqrt(l2);
+}
+function rdp(p, eps){
+  const keep = new Uint8Array(p.length); keep[0] = keep[p.length-1] = 1;
+  const st = [[0, p.length-1]];
+  while (st.length){
+    const [s, e] = st.pop(); let md = 0, mi = -1;
+    for (let i = s+1; i < e; i++){ const d = perp(p[i], p[s], p[e]); if (d > md){ md = d; mi = i; } }
+    if (md > eps){ keep[mi] = 1; st.push([s, mi], [mi, e]); }
+  }
+  return p.filter((_, i) => keep[i]);
+}
+function simplifyClosed(pts, eps){
+  if (eps <= 0 || pts.length < 6) return pts;
+  let fi = 0, fd = -1;
+  for (let i = 1; i < pts.length; i++){ const d = Math.hypot(pts[i][0]-pts[0][0], pts[i][1]-pts[0][1]); if (d > fd){ fd = d; fi = i; } }
+  const a = rdp(pts.slice(0, fi+1), eps), b = rdp(pts.slice(fi).concat([pts[0]]), eps);
+  return a.slice(0, -1).concat(b.slice(0, -1));
+}
+function signedArea(p){
+  let s = 0;
+  for (let i = 0, n = p.length; i < n; i++){ const a = p[i], b = p[(i+1)%n]; s += a[0]*b[1] - b[0]*a[1]; }
+  return s / 2;
+}
+
+function traceShape(gray, w, h, lab, ncomps, ids, box, o){
+  const member = new Uint8Array(ncomps); for (const id of ids) member[id] = 1;
+  const pad = 4, x0 = box.minx - pad, y0 = box.miny - pad;
+  const rw = box.maxx - box.minx + 1 + 2*pad, rh = box.maxy - box.miny + 1 + 2*pad;
+  const f = new Float32Array(rw * rh);
+  for (let y = 0; y < rh; y++){
+    const gy = y0 + y;
+    for (let x = 0; x < rw; x++){
+      const gx = x0 + x; let v = 255;
+      if (gx >= 0 && gy >= 0 && gx < w && gy < h){
+        const i = gy*w + gx, l = lab[i];
+        v = (l !== 0 && !member[l]) ? 255 : gray[i];   // hide neighbouring letters
+      }
+      f[y*rw + x] = v;
+    }
+  }
+  for (let p = 0; p < o.smooth; p++) blurPass(f, rw, rh);
+  for (let i = 0; i < f.length; i++) f[i] = o.thr - f[i];
+  const eps = (o.simplify / 100) * (box.maxy - box.miny + 1);
+  const loops = [];
+  for (const raw of contours(f, rw, rh)){
+    const pts = simplifyClosed(raw, eps).map(p => [p[0] + x0, p[1] + y0]);
+    if (pts.length < 3) continue;
+    loops.push({ pts, area: signedArea(pts) });
+  }
+  if (!loops.length) return [];
+  let big = loops[0]; for (const l of loops) if (Math.abs(l.area) > Math.abs(big.area)) big = l;
+  const outerSign = Math.sign(big.area);
+  return loops.map(l => ({ pts:l.pts, outer: Math.sign(l.area) === outerSign, a: Math.abs(l.area) }))
+              .filter(l => l.a >= (l.outer ? Math.max(1, o.minSpeck * 0.5) : Math.max(0.5, o.minHole)));
+}
+
+/* ---------------------------------------------------------- font assembly */
+const median = a => { const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m-1] + s[m]) / 2; };
+
+function analyze(o){
+  const w = S.w, h = S.h, gray = currentGray();
+  const { lab, comps, groups } = findGroups(gray, w, h, o.thr);
+  const lines = $('chars').value.split(/\r?\n/).map(l => Array.from(l).filter(c => !/\s/.test(c))).filter(l => l.length);
+  const warnings = [];
+  const N = lines.reduce((s, l) => s + l.length, 0);
+  const info = { w, h, groups, mains:[], smalls:[], ignored:[], N, found:0, lines, warnings, ok:false, shapes:[] };
+  const inCrop = g => !S.crop || (g.cx >= S.crop.x0 && g.cx <= S.crop.x1 && g.cy >= S.crop.y0 && g.cy <= S.crop.y1);
+  const cand = groups.filter(g => inCrop(g) && g.area >= o.minSpeck);
+  info.found = cand.length;
+  for (const g of groups) if (!cand.includes(g)) info.ignored.push(g);
+  if (N === 0){ info.error = 'Type the characters that appear on the sheet in step 2.'; return info; }
+  const byArea = [...cand].sort((a, b) => b.area - a.area);
+  const mains = byArea.slice(0, N), smalls = byArea.slice(N);
+  info.mains = mains; info.smalls = smalls;
+  if (cand.length < N){
+    info.error = `Found ${cand.length} shapes but you listed ${N} characters.`;
+    return info;
+  }
+  // attach i/j dots and similar bits to the nearest letter
+  for (const m of mains) m.extra = [];
+  // A dot must be much smaller than its letter and very close to it; frames and captions are not.
+  for (const s of smalls){
+    const sh = s.maxy - s.miny + 1;
+    let best = null, bd = 1e9;
+    for (const m of mains){
+      const mh = m.maxy - m.miny + 1;
+      const sw = s.maxx - s.minx + 1;
+      if (s.area > 0.4 * m.area || sh > 0.5 * mh || Math.max(sw, sh) / Math.min(sw, sh) > 3.5) continue;
+      const gx = Math.max(0, Math.max(m.minx, s.minx) - Math.min(m.maxx, s.maxx));
+      const gy = Math.max(0, Math.max(m.miny, s.miny) - Math.min(m.maxy, s.maxy));
+      const d = Math.hypot(gx, gy);
+      if (d < bd && d <= 0.06 * mh + 2){ bd = d; best = m; }
+    }
+    if (best){ best.extra.push(s); s.owner = best; } else info.ignored.push(s);
+  }
+  // Leftovers should only be dots and specks. A leftover about as tall as a letter means the
+  // wrong shapes were picked (a title or caption on the sheet), so stop instead of guessing.
+  const medH = median(mains.map(m => m.maxy - m.miny + 1));
+  const letterLike = smalls.filter(s => { const r = (s.maxy - s.miny + 1) / medH; return r >= 0.5 && r <= 2; });
+  if (letterLike.length){
+    for (const s of letterLike) s.flag = true;
+    info.error = `There are ${letterLike.length} more letter-sized shape${letterLike.length > 1 ? 's' : ''} than the ${N} characters you listed (shown in red).` +
+      ' Drag a box around just the letters, or add the missing characters to step 2.';
+    return info;
+  }
+  // reading order
+  const order = [...mains].sort((a, b) => a.cy - b.cy);
+  let pos = 0; const seq = [];
+  lines.forEach((ln, li) => {
+    const chunk = order.slice(pos, pos + ln.length).sort((a, b) => a.cx - b.cx); pos += ln.length;
+    chunk.forEach((m, i) => { m.ch = ln[i]; m.line = li; seq.push(m); });
+  });
+  // trace
+  const shapes = [];
+  for (const m of seq){
+    const ids = [...m.ids]; let box = { minx:m.minx, miny:m.miny, maxx:m.maxx, maxy:m.maxy };
+    for (const s of m.extra){
+      ids.push(...s.ids);
+      box = { minx:Math.min(box.minx, s.minx), miny:Math.min(box.miny, s.miny), maxx:Math.max(box.maxx, s.maxx), maxy:Math.max(box.maxy, s.maxy) };
+    }
+    const loops = traceShape(gray, w, h, lab, comps.length, ids, box, o);
+    if (!loops.length){ warnings.push(`No outline found for "${m.ch}".`); continue; }
+    let minx = 1e9, miny = 1e9, maxx = -1e9, maxy = -1e9;
+    for (const l of loops) for (const p of l.pts){ if (p[0] < minx) minx = p[0]; if (p[0] > maxx) maxx = p[0]; if (p[1] < miny) miny = p[1]; if (p[1] > maxy) maxy = p[1]; }
+    shapes.push({ ch:m.ch, line:m.line, loops, minx, miny, maxx, maxy });
+  }
+  info.shapes = shapes; info.ok = shapes.length > 0;
+  return info;
+}
+
+function makeGlyphs(info, o){
+  const desc = new Set(Array.from(o.desc));
+  const base = {};
+  for (let li = 0; li < info.lines.length; li++){
+    const v = info.shapes.filter(s => s.line === li && !desc.has(s.ch)).map(s => s.maxy);
+    if (v.length) base[li] = median(v);
+  }
+  const capLike = info.shapes.filter(s => /[\p{Lu}\p{Nd}]/u.test(s.ch)).map(s => s.maxy - s.miny);
+  const ref = capLike.length ? median(capLike) : Math.max(...info.shapes.map(s => s.maxy - s.miny));
+  const scale = o.cap / ref;
+  const out = new Map();
+  let dup = 0;
+  for (const s of info.shapes){
+    const cp = s.ch.codePointAt(0);
+    if (cp > 0xFFFF){ info.warnings.push(`"${s.ch}" is outside the basic Unicode range and was skipped.`); continue; }
+    const by = (o.shared && base[s.line] !== undefined) ? base[s.line] : s.maxy;
+    const cons = [];
+    let xMin = 1e9, yMin = 1e9, xMax = -1e9, yMax = -1e9;
+    for (const l of s.loops){
+      let pts = l.pts.map(p => [Math.round((p[0] - s.minx) * scale + o.bearing), Math.round((by - p[1]) * scale)]);
+      // drop consecutive duplicates created by rounding
+      pts = pts.filter((p, i) => { const q = pts[(i + pts.length - 1) % pts.length]; return p[0] !== q[0] || p[1] !== q[1]; });
+      if (pts.length < 3) continue;
+      const A = signedArea(pts);                 // y-up: positive = counter-clockwise
+      if ((l.outer && A > 0) || (!l.outer && A < 0)) pts.reverse();   // TrueType: outer clockwise, holes counter-clockwise
+      cons.push(pts);
+      for (const p of pts){ if (p[0] < xMin) xMin = p[0]; if (p[0] > xMax) xMax = p[0]; if (p[1] < yMin) yMin = p[1]; if (p[1] > yMax) yMax = p[1]; }
+    }
+    if (!cons.length) continue;
+    if (out.has(cp)) dup++;
+    out.set(cp, { ch:s.ch, code:cp, contours:cons, xMin, yMin, xMax, yMax, adv: Math.round((s.maxx - s.minx) * scale + 2 * o.bearing), lsb: xMin });
+  }
+  if (dup) info.warnings.push(`${dup} character${dup > 1 ? 's were' : ' was'} listed twice; the later one was kept.`);
+  return [...out.values()].sort((a, b) => a.code - b.code);
+}
+
+/* ------------------------------------------------------------ TTF writer */
+class W {
+  constructor(){ this.a = []; }
+  get length(){ return this.a.length; }
+  u8(v){ this.a.push(v & 255); }
+  u16(v){ this.a.push((v >> 8) & 255, v & 255); }
+  i16(v){ this.u16(v & 0xFFFF); }
+  u32(v){ this.a.push((v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255); }
+  tag(s){ for (let i = 0; i < 4; i++) this.a.push(s.charCodeAt(i)); }
+  pad4(){ while (this.a.length % 4) this.a.push(0); }
+  bytes(){ return Uint8Array.from(this.a); }
+}
+const sum32 = b => { let s = 0; for (let i = 0; i < b.length; i += 4) s = (s + (((b[i] << 24) | (b[i+1] << 16) | (b[i+2] << 8) | b[i+3]) >>> 0)) >>> 0; return s; };
+const log2f = n => Math.floor(Math.log2(n));
+
+function buildTTF(glyphs, m){
+  const notdef = {
+    code:null, adv:500, lsb:50, xMin:50, yMin:0, xMax:450, yMax:700,
+    contours:[ [[50,0],[50,700],[450,700],[450,0]], [[90,40],[410,40],[410,660],[90,660]] ]
+  };
+  const space = { code:32, adv:m.space, lsb:0, contours:[] };
+  const all = [notdef, space, ...glyphs.filter(g => g.code !== 32)];
+  const nG = all.length;
+
+  // glyf + loca
+  const glyf = new W(), loca = [];
+  let maxPts = 0, maxCon = 0, bx0 = 1e9, by0 = 1e9, bx1 = -1e9, by1 = -1e9;
+  for (const g of all){
+    loca.push(glyf.length);
+    if (!g.contours.length) continue;
+    let np = 0; for (const c of g.contours) np += c.length;
+    maxPts = Math.max(maxPts, np); maxCon = Math.max(maxCon, g.contours.length);
+    glyf.i16(g.contours.length); glyf.i16(g.xMin); glyf.i16(g.yMin); glyf.i16(g.xMax); glyf.i16(g.yMax);
+    let e = -1; for (const c of g.contours){ e += c.length; glyf.u16(e); }
+    glyf.u16(0);
+    for (let i = 0; i < np; i++) glyf.u8(1);
+    let px = 0; for (const c of g.contours) for (const p of c){ glyf.i16(p[0] - px); px = p[0]; }
+    let py = 0; for (const c of g.contours) for (const p of c){ glyf.i16(p[1] - py); py = p[1]; }
+    glyf.pad4();
+    bx0 = Math.min(bx0, g.xMin); by0 = Math.min(by0, g.yMin); bx1 = Math.max(bx1, g.xMax); by1 = Math.max(by1, g.yMax);
+  }
+  loca.push(glyf.length);
+  const locaW = new W(); for (const o of loca) locaW.u32(o);
+
+  // hmtx / hhea numbers
+  const hmtx = new W();
+  let advMax = 0, minLsb = 1e9, minRsb = 1e9, maxExt = -1e9, advSum = 0, advN = 0;
+  for (const g of all){
+    hmtx.u16(g.adv); hmtx.i16(g.lsb);
+    advMax = Math.max(advMax, g.adv);
+    if (g.contours.length){
+      minLsb = Math.min(minLsb, g.lsb);
+      minRsb = Math.min(minRsb, g.adv - g.lsb - (g.xMax - g.xMin));
+      maxExt = Math.max(maxExt, g.lsb + (g.xMax - g.xMin));
+    }
+    if (g.adv > 0){ advSum += g.adv; advN++; }
+  }
+
+  // head
+  const head = new W();
+  const t = Math.floor(Date.now() / 1000) + 2082844800;
+  head.u32(0x00010000); head.u32(0x00010000); head.u32(0); head.u32(0x5F0F3CF5);
+  head.u16(3); head.u16(m.upm);
+  head.u32(0); head.u32(t >>> 0); head.u32(0); head.u32(t >>> 0);
+  head.i16(bx0); head.i16(by0); head.i16(bx1); head.i16(by1);
+  head.u16(0); head.u16(8); head.i16(2); head.i16(1); head.i16(0);
+
+  // hhea
+  const hhea = new W();
+  hhea.u32(0x00010000); hhea.i16(m.ascent); hhea.i16(-m.descent); hhea.i16(0);
+  hhea.u16(advMax); hhea.i16(minLsb); hhea.i16(minRsb); hhea.i16(maxExt);
+  hhea.i16(1); hhea.i16(0); hhea.i16(0);
+  for (let i = 0; i < 4; i++) hhea.i16(0);
+  hhea.i16(0); hhea.u16(nG);
+
+  // maxp
+  const maxp = new W();
+  maxp.u32(0x00010000); maxp.u16(nG); maxp.u16(maxPts); maxp.u16(maxCon);
+  maxp.u16(0); maxp.u16(0); maxp.u16(1);
+  for (let i = 0; i < 8; i++) maxp.u16(0);
+
+  // cmap (format 4)
+  const ents = all.map((g, gid) => ({ code:g.code, gid })).filter(e => e.code !== null).sort((a, b) => a.code - b.code);
+  const segs = [];
+  for (const e of ents){
+    const last = segs[segs.length - 1];
+    if (last && e.code === last.end + 1 && e.gid === last.gid0 + (e.code - last.start)) last.end = e.code;
+    else segs.push({ start:e.code, end:e.code, gid0:e.gid });
+  }
+  segs.push({ start:0xFFFF, end:0xFFFF, gid0:0, last:true });
+  const sc = segs.length, srch = 2 * Math.pow(2, log2f(sc));
+  const sub = new W();
+  sub.u16(4); sub.u16(16 + 8 * sc); sub.u16(0);
+  sub.u16(sc * 2); sub.u16(srch); sub.u16(log2f(sc)); sub.u16(sc * 2 - srch);
+  for (const s of segs) sub.u16(s.end);
+  sub.u16(0);
+  for (const s of segs) sub.u16(s.start);
+  for (const s of segs) sub.u16(s.last ? 1 : ((s.gid0 - s.start) & 0xFFFF));
+  for (let i = 0; i < sc; i++) sub.u16(0);
+  const cmap = new W();
+  cmap.u16(0); cmap.u16(2);
+  cmap.u16(0); cmap.u16(3); cmap.u32(20);
+  cmap.u16(3); cmap.u16(1); cmap.u32(20);
+  for (const b of sub.a) cmap.u8(b);
+
+  // name
+  const ps = (m.family.replace(/[^A-Za-z0-9]/g, '') || 'TracedFont').slice(0, 60);
+  const strs = { 1:m.family, 2:'Regular', 3:`${ps}-Regular;1.000`, 4:`${m.family} Regular`, 5:'Version 1.000', 6:`${ps}-Regular` };
+  const ids = Object.keys(strs).map(Number).sort((a, b) => a - b);
+  const sdata = new W(), recs = [];
+  for (const id of ids){
+    const s = strs[id], off = sdata.length;
+    for (let i = 0; i < s.length; i++) sdata.u16(s.charCodeAt(i));
+    recs.push({ id, len: s.length * 2, off });
+  }
+  const name = new W();
+  name.u16(0); name.u16(recs.length); name.u16(6 + 12 * recs.length);
+  for (const r of recs){ name.u16(3); name.u16(1); name.u16(0x409); name.u16(r.id); name.u16(r.len); name.u16(r.off); }
+  for (const b of sdata.a) name.u8(b);
+
+  // OS/2 v4
+  const os2 = new W();
+  os2.u16(4); os2.i16(Math.round(advSum / Math.max(1, advN))); os2.u16(400); os2.u16(5); os2.u16(0);
+  os2.i16(650); os2.i16(600); os2.i16(0); os2.i16(75);
+  os2.i16(650); os2.i16(600); os2.i16(0); os2.i16(350);
+  os2.i16(50); os2.i16(300); os2.i16(0);
+  for (let i = 0; i < 10; i++) os2.u8(0);
+  os2.u32(1); os2.u32(0); os2.u32(0); os2.u32(0);
+  os2.tag('NONE');
+  os2.u16(0x00C0); os2.u16(32); os2.u16(Math.min(0xFFFF, Math.max(...ents.map(e => e.code).filter(c => c < 0xFFFF))));
+  os2.i16(m.ascent); os2.i16(-m.descent); os2.i16(0);
+  os2.u16(m.ascent); os2.u16(m.descent);
+  os2.u32(1); os2.u32(0);
+  os2.i16(m.xH); os2.i16(m.capH); os2.u16(0); os2.u16(32); os2.u16(0);
+
+  // post v3
+  const post = new W();
+  post.u32(0x00030000); post.u32(0); post.i16(-100); post.i16(50);
+  post.u32(0); post.u32(0); post.u32(0); post.u32(0); post.u32(0);
+
+  const tabs = { 'OS/2':os2, cmap, glyf, head, hhea, hmtx, loca:locaW, maxp, name, post };
+  const tags = Object.keys(tabs).sort();
+  const blobs = {}, rawLen = {};
+  for (const tg of tags){ rawLen[tg] = tabs[tg].length; tabs[tg].pad4(); blobs[tg] = tabs[tg].bytes(); }
+  const n = tags.length, sr = 16 * Math.pow(2, log2f(n));
+  const dir = new W();
+  dir.u32(0x00010000); dir.u16(n); dir.u16(sr); dir.u16(log2f(n)); dir.u16(n * 16 - sr);
+  let off = 12 + 16 * n; const offs = {};
+  for (const tg of tags){
+    offs[tg] = off;
+    dir.tag(tg); dir.u32(sum32(blobs[tg])); dir.u32(off); dir.u32(rawLen[tg]);   // true length; padding follows
+    off += blobs[tg].length;
+  }
+  const font = new Uint8Array(off);
+  font.set(dir.bytes(), 0);
+  for (const tg of tags) font.set(blobs[tg], offs[tg]);
+  const adj = (0xB1B0AFBA - sum32(font)) >>> 0, p = offs.head + 8;
+  font[p] = adj >>> 24; font[p+1] = (adj >>> 16) & 255; font[p+2] = (adj >>> 8) & 255; font[p+3] = adj & 255;
+  return font;
+}
+
+/* --------------------------------------------------------------------- UI */
+function opts(){
+  return {
+    thr: +$('thr').value, smooth: +$('smooth').value, simplify: +$('simplify').value,
+    minSpeck: Math.max(0, +$('minSpeck').value || 0), minHole: Math.max(0, +$('minHole').value || 0),
+    cap: Math.min(900, Math.max(100, +$('cap').value || 700)),
+    bearing: Math.min(300, Math.max(0, +$('bearing').value || 0)),
+    shared: $('shared').checked, desc: $('desc').value,
+    name: ($('name').value.trim() || 'MyTracedFont')
+  };
+}
+function setStatus(msg, kind){ const s = $('status'); s.textContent = msg; s.className = 'status' + (kind ? ' ' + kind : ''); }
+
+function draw(info){
+  const cv = $('view'), ctx = cv.getContext('2d');
+  cv.width = S.w; cv.height = S.h;
+  const gray = currentGray(), id = ctx.createImageData(S.w, S.h);
+  for (let i = 0, j = 0; i < gray.length; i++, j += 4){ id.data[j] = id.data[j+1] = id.data[j+2] = gray[i]; id.data[j+3] = 255; }
+  ctx.putImageData(id, 0, 0);
+  const lw = Math.max(1.5, S.w / 600), fs = Math.max(12, Math.round(S.w / 60));
+  if (S.crop){
+    ctx.fillStyle = 'rgba(120,120,120,.55)';
+    const c = S.crop;
+    ctx.fillRect(0, 0, S.w, c.y0); ctx.fillRect(0, c.y1, S.w, S.h - c.y1);
+    ctx.fillRect(0, c.y0, c.x0, c.y1 - c.y0); ctx.fillRect(c.x1, c.y0, S.w - c.x1, c.y1 - c.y0);
+    ctx.strokeStyle = '#1f4fd8'; ctx.lineWidth = lw * 1.5; ctx.setLineDash([lw * 5, lw * 3]);
+    ctx.strokeRect(c.x0, c.y0, c.x1 - c.x0, c.y1 - c.y0); ctx.setLineDash([]);
+  }
+  if (!info) return;
+  ctx.lineWidth = lw; ctx.font = `bold ${fs}px system-ui, sans-serif`; ctx.textBaseline = 'bottom';
+  for (const g of info.smalls){
+    if (g.flag){ ctx.strokeStyle = '#d4202a'; ctx.lineWidth = lw * 2; ctx.strokeRect(g.minx - .5, g.miny - .5, g.maxx - g.minx + 1, g.maxy - g.miny + 1); ctx.lineWidth = lw; }
+    else if (g.owner){ ctx.strokeStyle = '#e07b00'; ctx.strokeRect(g.minx - .5, g.miny - .5, g.maxx - g.minx + 1, g.maxy - g.miny + 1); }
+  }
+  for (const g of info.mains){
+    ctx.strokeStyle = info.error ? '#b3261e' : '#1f4fd8';
+    ctx.strokeRect(g.minx - .5, g.miny - .5, g.maxx - g.minx + 1, g.maxy - g.miny + 1);
+    if (g.ch){
+      const tw = ctx.measureText(g.ch).width + 6, tx = g.minx, ty = g.miny - 1 < fs ? g.maxy + fs + 2 : g.miny - 1;
+      ctx.fillStyle = '#1f4fd8'; ctx.fillRect(tx, ty - fs - 1, tw, fs + 2);
+      ctx.fillStyle = '#fff'; ctx.fillText(g.ch, tx + 3, ty);
+    }
+  }
+}
+
+async function showFont(buf, glyphs, name){
+  const fam = 'ImgFont' + (++S.fontCount);
+  try{
+    const ff = new FontFace(fam, buf.slice(0).buffer);
+    await ff.load(); document.fonts.add(ff);
+    if (S.fam) for (const f of document.fonts) if (f.family === S.fam) document.fonts.delete(f);
+    S.fam = fam;
+  }catch(e){
+    return false;
+  }
+  $('sample').style.fontFamily = `"${fam}", system-ui`;
+  const box = $('glyphs'); box.textContent = '';
+  for (const g of glyphs){
+    const d = document.createElement('div'); d.className = 'g';
+    const s = document.createElement('span'); s.textContent = g.ch; s.style.fontFamily = `"${fam}", system-ui`;
+    const sm = document.createElement('small'); sm.textContent = g.ch;
+    d.append(s, sm); box.append(d);
+  }
+  return true;
+}
+
+async function run(){
+  if (!S.gray0) return;
+  const id = ++S.runId, o = opts();
+  await new Promise(r => setTimeout(r, 0));
+  let info;
+  try{ info = analyze(o); }catch(e){ console.error(e); setStatus('Something went wrong while reading the image: ' + e.message, 'bad'); return; }
+  if (id !== S.runId) return;
+  $('empty').hidden = true; $('view').hidden = false; $('clearCrop').hidden = !S.crop;
+  draw(info); S.info = info; window.__info = info;
+  $('download').disabled = true; S.fontBuf = null; window.__font = null;
+  if (info.error){
+    const more = info.found >= info.N ? '' : ' Try a different darkness cut-off, or check that every character is listed.';
+    setStatus(info.error + more, 'bad'); $('dlnote').textContent = 'Fix the detection to build the font.'; return;
+  }
+  const glyphs = makeGlyphs(info, o);
+  if (!glyphs.length){ setStatus('No outlines could be traced. Try changing the darkness cut-off.', 'bad'); return; }
+  const upm = 1000;
+  let top = 800, bottom = -200;
+  for (const g of glyphs){ top = Math.max(top, g.yMax); bottom = Math.min(bottom, g.yMin); }
+  const xg = glyphs.find(g => g.ch === 'x');
+  const font = buildTTF(glyphs, {
+    family: o.name, upm,
+    ascent: Math.ceil(top / 10) * 10 + 20, descent: Math.ceil(-bottom / 10) * 10 + 20,
+    space: Math.round(o.cap * 0.43), capH: o.cap, xH: xg ? xg.yMax : Math.round(o.cap * 0.5)
+  });
+  if (id !== S.runId) return;
+  const ok = await showFont(font, glyphs, o.name);
+  if (id !== S.runId) return;
+  if (!ok){ setStatus('The font was built but your browser rejected it. Please report this image so it can be fixed.', 'bad'); return; }
+  S.fontBuf = font; window.__font = font;
+  $('download').disabled = false;
+  $('dlnote').textContent = `${o.name}.ttf · ${glyphs.length} glyphs · ${(font.length / 1024).toFixed(1)} KB`;
+  const warn = info.warnings.length ? ' ' + info.warnings.join(' ') : '';
+  setStatus(`Font ready: ${glyphs.length} characters traced from ${info.N} shapes.${warn}`, info.warnings.length ? 'warn' : 'ok');
+}
+function schedule(ms){ clearTimeout(S.timer); S.timer = setTimeout(run, ms === undefined ? 250 : ms); }
+
+/* events */
+$('file').addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+const drop = $('drop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); $('file').click(); } });
+$('demo').addEventListener('click', demoSheet);
+$('auto').addEventListener('click', () => { autoThreshold(); schedule(0); });
+$('clearCrop').addEventListener('click', () => { S.crop = null; schedule(0); });
+for (const id of ['thr', 'smooth', 'simplify']){
+  $(id).addEventListener('input', () => {
+    $(id + 'Val').textContent = id === 'simplify' ? (+$(id).value).toFixed(2) : $(id).value; schedule();
+  });
+}
+$('invert').addEventListener('change', () => { autoThreshold(); schedule(0); });
+for (const id of ['chars', 'minSpeck', 'minHole', 'cap', 'bearing', 'shared', 'desc', 'name']){
+  $(id).addEventListener('input', () => schedule());
+}
+$('download').addEventListener('click', () => {
+  if (!S.fontBuf) return;
+  const o = opts(), fn = (o.name.replace(/[^A-Za-z0-9._-]+/g, '') || 'font') + '.ttf';
+  const url = URL.createObjectURL(new Blob([S.fontBuf], { type:'font/ttf' }));
+  const a = document.createElement('a'); a.href = url; a.download = fn;
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+});
+
+// drag a box on the picture to limit detection to that area
+(() => {
+  const cv = $('view'); let start = null;
+  const pos = e => { const r = cv.getBoundingClientRect(); return [ (e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height ]; };
+  cv.addEventListener('pointerdown', e => { if (!S.gray0) return; start = pos(e); cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', e => {
+    if (!start) return;
+    const p = pos(e);
+    S.crop = { x0: Math.max(0, Math.min(start[0], p[0])), y0: Math.max(0, Math.min(start[1], p[1])),
+               x1: Math.min(S.w, Math.max(start[0], p[0])), y1: Math.min(S.h, Math.max(start[1], p[1])) };
+    draw(S.info);
+  });
+  cv.addEventListener('pointerup', e => {
+    if (!start) return; start = null;
+    if (S.crop && (S.crop.x1 - S.crop.x0 < 8 || S.crop.y1 - S.crop.y0 < 8)) S.crop = null;
+    schedule(0);
+  });
+})();
+})();
+</script>
+</body>
+</html>
