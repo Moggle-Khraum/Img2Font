@@ -4,7 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Image to Font</title>
-<meta name="description" content="Turn a picture of letters or numbers into an installable .ttf font, entirely in your browser.">
+<meta name="description" content="Turn a picture of letters or numbers into an installable .ttf or .woff font, entirely in your browser.">
+<meta name="theme-color" content="#1f4fd8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
 :root{
   --bg:#f7f6f2; --fg:#1c1c1a; --mut:#66665f; --card:#ffffff; --line:#dcdad2;
@@ -23,101 +29,114 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 .wrap{max-width:1120px;margin:0 auto;padding:28px 16px 64px}
 h1{font-size:28px;line-height:1.15;margin:0 0 6px;letter-spacing:-.01em}
-.sub{color:var(--mut);margin:0 0 24px;max-width:62ch}
+.sub{color:var(--mut);margin:0 0 18px;max-width:62ch}
+.topbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 20px}
+.topbar .note{color:var(--mut);font-size:13px;margin-left:auto}
 .grid{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:20px;align-items:start}
 @media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
 .card + .card{margin-top:16px}
 h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:0 0 10px;font-weight:600}
-.drop{display:block;border:2px dashed var(--line);border-radius:10px;padding:22px 12px;text-align:center;cursor:pointer;background:var(--field);color:var(--mut)}
-.drop.over,.drop:focus-visible{border-color:var(--acc);outline:none;color:var(--fg)}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--field);color:var(--fg);border-radius:8px;padding:8px 12px}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--acc);color:var(--accfg);border-color:transparent}
+button.small{padding:5px 10px;font-size:14px}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+input[type=text],input[type=number],textarea,select{font:inherit;color:var(--fg);background:var(--field);border:1px solid var(--line);border-radius:8px;padding:7px 9px;width:100%}
+textarea{min-height:90px;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px}
+input[type=range]{width:100%;accent-color:var(--acc)}
+label{display:block;font-size:14px;color:var(--mut);margin:10px 0 4px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chk{display:flex;gap:8px;align-items:center;color:var(--fg);font-size:14px;margin:10px 0 0}
+.chk input{width:auto}
+.sliderhead{display:flex;justify-content:space-between;font-size:14px;color:var(--mut);margin-top:10px}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:22px 14px;text-align:center;color:var(--mut);cursor:pointer}
+.drop.over{border-color:var(--acc);color:var(--fg)}
 .drop strong{color:var(--fg)}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-button,.btn{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--fg);padding:8px 14px;border-radius:8px;cursor:pointer}
-button:hover{border-color:var(--acc)}
-button.primary{background:var(--acc);border-color:var(--acc);color:var(--accfg);font-weight:600}
-button.primary[disabled]{opacity:.45;cursor:not-allowed}
-button.small{padding:4px 10px;font-size:14px}
-textarea,input[type=text],input[type=number]{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--field);color:var(--fg)}
-textarea{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;resize:vertical;min-height:96px;white-space:pre;overflow:auto}
-label{display:block;font-size:14px;color:var(--mut);margin:12px 0 4px}
-label.chk{display:flex;gap:8px;align-items:center;color:var(--fg);margin:10px 0 0}
-input[type=range]{width:100%}
-.hint{font-size:13px;color:var(--mut);margin:6px 0 0}
-details summary{cursor:pointer;font-weight:600;font-size:14px}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.val{float:right;color:var(--fg);font-variant-numeric:tabular-nums}
-.status{padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--field);font-size:14px;margin-bottom:12px}
-.status.ok{border-color:var(--ok);color:var(--ok)}
-.status.bad{border-color:var(--bad);color:var(--bad)}
-.status.warn{border-color:var(--warn);color:var(--warn)}
-.viewbox{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;line-height:0}
+details{margin-top:12px}
+summary{cursor:pointer;color:var(--mut);font-size:14px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.viewbox{position:relative;background:var(--field);border:1px dashed var(--line);border-radius:10px;min-height:180px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.viewbox .empty{color:var(--mut);padding:24px;text-align:center}
 canvas#view{width:100%;height:auto;display:block;cursor:crosshair;touch-action:none}
-.empty{padding:48px 16px;text-align:center;color:var(--mut);line-height:1.5}
-#sample{width:100%;font-size:56px;line-height:1.25;min-height:84px;padding:8px 10px;resize:vertical;white-space:pre-wrap;font-family:system-ui}
-.glyphs{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;margin-top:12px}
-.g{border:1px solid var(--line);border-radius:8px;text-align:center;padding:6px 0 2px;background:var(--field)}
-.g span{display:block;font-size:44px;line-height:1.35}
-.g small{color:var(--mut);font-size:11px}
-.dl{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px}
-.note{font-size:13px;color:var(--mut)}
-a{color:var(--acc)}
+.status{margin:12px 0 0;padding:10px 12px;border-radius:8px;background:var(--field);border:1px solid var(--line);font-size:15px}
+.status.ok{color:var(--ok)}
+.status.bad{color:var(--bad)}
+.status.warn{color:var(--warn)}
+.dlnote{color:var(--mut);font-size:13px;margin:8px 0 0}
+.hint{color:var(--mut);font-size:13px;margin:6px 0 0;min-height:1.2em}
+.sample{font-size:48px;line-height:1.2;word-break:break-word;min-height:1.4em;margin:8px 0 4px}
+.glyphs{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-top:12px}
+.g{border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--field);text-align:center}
+.g span{display:block;font-size:44px;line-height:1.1}
+.g small{display:block;color:var(--mut);font-size:12px;margin:2px 0 6px}
+.g input{font-size:13px;padding:4px 6px;text-align:center}
+.exports{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Image to Font</h1>
-  <p class="sub">Upload a picture of letters or numbers and get an installable <b>.ttf</b> font. Everything runs in your browser; your image is never uploaded.</p>
+  <p class="sub">Turn a picture of letters or numbers into an installable font. Everything happens in your browser, and nothing is uploaded.</p>
+
+  <div class="topbar">
+    <button id="undo" type="button" disabled>Undo</button>
+    <button id="clear" type="button">Clear</button>
+    <span class="note" id="saveNote">Settings are saved in this browser.</span>
+  </div>
 
   <div class="grid">
     <div>
       <div class="card">
         <h2>1. Image</h2>
-        <label class="drop" id="drop" tabindex="0">
-          <input type="file" id="file" accept="image/*" hidden>
-          <strong>Choose an image</strong> or drop it here<br><span class="hint">PNG or JPG, dark shapes on a light background</span>
-        </label>
+        <div id="drop" class="drop" tabindex="0" role="button" aria-label="Choose an image">
+          <strong>Drop a PNG or JPG here</strong><br>or click to choose one
+        </div>
+        <input type="file" id="file" accept="image/*" hidden>
         <div class="row" style="margin-top:10px">
-          <button id="demo" class="small" type="button">Try a demo sheet</button>
+          <select id="presets" aria-label="Try a sample sheet">
+            <option value="">Try a sample sheet…</option>
+            <option value="printed">Printed serif (demo)</option>
+            <option value="sans">Blocky sans-serif (demo)</option>
+            <option value="mono">Monospace (demo)</option>
+            <option value="photo">Phone photo, tilted (demo)</option>
+          </select>
         </div>
       </div>
 
       <div class="card">
         <h2>2. What is on the sheet?</h2>
-        <textarea id="chars" spellcheck="false" aria-label="Characters on the sheet">ABCDEFGHIJKLM
-NOPQRSTUVWXYZ
-abcdefghijklm
-nopqrstuvwxyz
-0123456789</textarea>
-        <p class="hint">One line per row of the picture, left to right, top to bottom. No spaces. If a letter is listed twice, the later one is kept.</p>
+        <label for="chars">Characters, one line per row, in the order they appear</label>
+        <textarea id="chars" spellcheck="false" placeholder="ABC&#10;abc&#10;123"></textarea>
+        <label for="desc">Characters that hang below the baseline</label>
+        <input type="text" id="desc" value="gjpqy" spellcheck="false">
+        <label for="name">Font name</label>
+        <input type="text" id="name" value="MyTracedFont" spellcheck="false">
       </div>
 
       <div class="card">
         <h2>3. Fine-tune</h2>
-        <label for="thr">Darkness cut-off <span class="val" id="thrVal">128</span></label>
-        <input type="range" id="thr" min="1" max="254" value="128">
+        <div class="sliderhead"><label for="thr" style="margin:0">Darkness cut-off</label><span id="thrVal"></span></div>
         <div class="row" style="margin-top:6px">
+          <input type="range" id="thr" min="1" max="254" value="128" style="flex:1">
           <button id="auto" class="small" type="button">Auto</button>
-          <label class="chk" style="margin:0"><input type="checkbox" id="invert"> Light shapes on dark</label>
         </div>
+        <label class="chk"><input type="checkbox" id="invert"> Light shapes on dark</label>
 
-        <details style="margin-top:14px">
-          <summary>More settings</summary>
-          <label for="smooth">Edge smoothing <span class="val" id="smoothVal">2</span></label>
-          <input type="range" id="smooth" min="0" max="5" value="2">
-          <label for="simplify">Outline detail (lower = more points) <span class="val" id="simplifyVal">0.30</span></label>
-          <input type="range" id="simplify" min="0" max="1.5" step="0.05" value="0.3">
-          <div class="two">
+        <div class="sliderhead"><label for="smooth" style="margin:0">Smoothing</label><span id="smoothVal"></span></div>
+        <input type="range" id="smooth" min="0" max="5" value="2">
+        <div class="sliderhead"><label for="simplify" style="margin:0">Simplify outlines</label><span id="simplifyVal"></span></div>
+        <input type="range" id="simplify" min="0" max="1.5" step="0.05" value="0.3">
+
+        <details>
+          <summary>More options</summary>
+          <div class="pair" style="margin-top:8px">
             <div><label for="minSpeck">Ignore specks under (px²)</label><input type="number" id="minSpeck" value="12" min="0"></div>
             <div><label for="minHole">Ignore holes under (px²)</label><input type="number" id="minHole" value="6" min="0"></div>
             <div><label for="cap">Capital height (font units)</label><input type="number" id="cap" value="700" min="100" max="900"></div>
             <div><label for="bearing">Side spacing (units)</label><input type="number" id="bearing" value="30" min="0" max="300"></div>
           </div>
           <label class="chk"><input type="checkbox" id="shared" checked> Letters in a row share one baseline</label>
-          <label for="desc">Letters that hang below the baseline</label>
-          <input type="text" id="desc" value="gjpqy" spellcheck="false">
-          <label for="name">Font name</label>
-          <input type="text" id="name" value="MyTracedFont" spellcheck="false">
         </details>
       </div>
     </div>
@@ -125,21 +144,26 @@ nopqrstuvwxyz
     <div>
       <div class="card">
         <h2>Detected shapes</h2>
-        <div id="status" class="status">Choose an image to begin, or try the demo sheet.</div>
         <div class="viewbox" id="viewbox"><div class="empty" id="empty">Your image will appear here.</div><canvas id="view" hidden></canvas></div>
-        <p class="hint" id="cropHint">Blue boxes are matched letters. If the sheet also has a title or captions, drag a box on the picture around just the letters.
-          <button id="clearCrop" class="small" type="button" hidden>Clear selection</button></p>
+        <div class="row" style="margin-top:8px"><button id="clearCrop" class="small" type="button" hidden>Clear selection</button></div>
+        <div class="status" id="status" role="status" aria-live="polite"></div>
       </div>
 
       <div class="card">
         <h2>Your font</h2>
-        <textarea id="sample" rows="2" spellcheck="false" aria-label="Type to preview the font">Hello World 123</textarea>
-        <div class="glyphs" id="glyphs"></div>
-        <div class="dl">
+        <label for="sampleText">Try some text</label>
+        <input type="text" id="sampleText" value="Hello, world 123" spellcheck="false">
+        <div class="sample" id="sample"></div>
+        <div class="dlnote" id="dlnote"></div>
+        <div class="exports">
           <button id="download" class="primary" type="button" disabled>Download .ttf</button>
-          <span class="note" id="dlnote">Build a font first.</span>
+          <button id="downloadWoff" type="button" disabled>Download .woff</button>
+          <button id="copyCss" type="button" disabled>Copy CSS</button>
         </div>
-        <p class="note">To install: open the downloaded file and choose Install (Windows / macOS), or add it in Font Book. Only use artwork you have the right to turn into a font.</p>
+        <p class="hint" id="exportNote"></p>
+        <h2 style="margin-top:14px">Letters</h2>
+        <p class="hint" style="margin:0 0 4px">Spacing sets the gap on each side of a letter. Leave it blank to use the general value.</p>
+        <div class="glyphs" id="glyphs"></div>
       </div>
     </div>
   </div>
@@ -150,9 +174,113 @@ nopqrstuvwxyz
 'use strict';
 const $ = id => document.getElementById(id);
 
-const S = { gray0:null, w:0, h:0, crop:null, runId:0, fontBuf:null, fam:null, info:null, timer:null, fontCount:0 };
+const S = { gray0:null, w:0, h:0, crop:null, runId:0, buildId:0, fontBuf:null, fam:null, info:null,
+  glyphs:null, timer:null, rbTimer:null, cpTimer:null, fontCount:0, imgCount:0, imgId:0,
+  overrides:{}, undo:[], lastSnap:null, lastSig:'' };
+const KEY = 'img2font:v1';
+const MAX_UNDO = 40;
+const SHEET_ROWS = ['ABCDEFGHIJKLM','NOPQRSTUVWXYZ','abcdefghijklm','nopqrstuvwxyz','0123456789'];
+const DEFAULTS = { thr:128, smooth:2, simplify:0.3, minSpeck:12, minHole:6, cap:700, bearing:30,
+  shared:true, invert:false, desc:'gjpqy', name:'MyTracedFont', chars:'', sampleText:'Hello, world 123' };
+const NUM_KEYS = ['thr','smooth','simplify','minSpeck','minHole','cap','bearing'];
+const TEXT_KEYS = ['desc','name','chars','sampleText'];
+const BOOL_KEYS = ['shared','invert'];
 
-/* ---------------------------------------------------------------- image in */
+/* ----------------------------------------------------------- settings */
+function getSettings(){
+  return {
+    thr: +$('thr').value, smooth: +$('smooth').value, simplify: +$('simplify').value,
+    minSpeck: +$('minSpeck').value || 0, minHole: +$('minHole').value || 0,
+    cap: +$('cap').value || 700, bearing: +$('bearing').value || 0,
+    shared: $('shared').checked, invert: $('invert').checked,
+    desc: $('desc').value, name: $('name').value, chars: $('chars').value, sampleText: $('sampleText').value
+  };
+}
+function applySettings(s){
+  if (!s) return;
+  for (const k of NUM_KEYS) if (s[k] !== undefined && Number.isFinite(+s[k])) $(k).value = s[k];
+  for (const k of TEXT_KEYS) if (typeof s[k] === 'string') $(k).value = s[k];
+  for (const k of BOOL_KEYS) if (typeof s[k] === 'boolean') $(k).checked = s[k];
+  updateLabels();
+}
+function updateLabels(){
+  $('thrVal').textContent = $('thr').value;
+  $('smoothVal').textContent = $('smooth').value;
+  $('simplifyVal').textContent = (+$('simplify').value).toFixed(2);
+  $('sample').textContent = $('sampleText').value || ' ';
+}
+function persist(){
+  try{ localStorage.setItem(KEY, JSON.stringify({ settings: getSettings(), overrides: S.overrides })); }catch(e){}
+}
+function restore(){
+  try{
+    const raw = localStorage.getItem(KEY); if (!raw) return;
+    const d = JSON.parse(raw);
+    applySettings(d.settings);
+    if (d.overrides && typeof d.overrides === 'object') S.overrides = d.overrides;
+  }catch(e){}
+}
+
+/* ------------------------------------------------------- undo history */
+// Sample text is not part of the undo history; everything else is.
+const undoable = s => { const { sampleText, ...rest } = s; return rest; };
+function currentSig(){ return JSON.stringify([undoable(getSettings()), S.overrides, S.crop, S.imgId]); }
+function takeSnap(){
+  return { gray:S.gray0, w:S.w, h:S.h, imgId:S.imgId, crop:S.crop ? { ...S.crop } : null,
+    overrides: JSON.parse(JSON.stringify(S.overrides)), settings: undoable(getSettings()) };
+}
+function updateButtons(){ $('undo').disabled = S.undo.length === 0; }
+// Records the state as one undo step if anything changed since the last record.
+function checkpoint(){
+  clearTimeout(S.cpTimer); S.cpTimer = null;
+  const sig = currentSig();
+  if (!S.lastSnap){ S.lastSnap = takeSnap(); S.lastSig = sig; updateButtons(); return; }
+  if (sig === S.lastSig) return;
+  S.undo.push(S.lastSnap); if (S.undo.length > MAX_UNDO) S.undo.shift();
+  S.lastSnap = takeSnap(); S.lastSig = sig;
+  updateButtons();
+}
+function scheduleCheckpoint(){ clearTimeout(S.cpTimer); S.cpTimer = setTimeout(checkpoint, 600); }
+function undo(){
+  checkpoint();
+  const prev = S.undo.pop();
+  if (!prev){ updateButtons(); return; }
+  S.gray0 = prev.gray; S.w = prev.w; S.h = prev.h; S.imgId = prev.imgId;
+  S.crop = prev.crop ? { ...prev.crop } : null;
+  S.overrides = JSON.parse(JSON.stringify(prev.overrides));
+  applySettings(prev.settings);
+  S.lastSnap = takeSnap(); S.lastSig = currentSig();
+  showImageState();
+  if (S.gray0) schedule(0); else resetResults();
+  persist(); updateButtons();
+}
+function clearAll(){
+  checkpoint();
+  clearTimeout(S.timer); clearTimeout(S.rbTimer);
+  S.runId++; S.buildId++;
+  S.gray0 = null; S.w = 0; S.h = 0; S.imgId = 0; S.crop = null; S.overrides = {};
+  applySettings(DEFAULTS);
+  $('file').value = '';
+  resetResults(); persist(); checkpoint();
+}
+
+/* --------------------------------------------------------- UI helpers */
+function setStatus(msg, kind){ const s = $('status'); s.textContent = msg; s.className = 'status' + (kind ? ' ' + kind : ''); }
+function setExportsEnabled(on){ for (const id of ['download','downloadWoff','copyCss']) $(id).disabled = !on; }
+function showImageState(){
+  const has = !!S.gray0;
+  $('empty').hidden = has; $('view').hidden = !has; $('clearCrop').hidden = !(has && S.crop);
+}
+function resetResults(){
+  S.info = null; S.fontBuf = null; S.glyphs = null;
+  setExportsEnabled(false);
+  $('glyphs').textContent = ''; $('dlnote').textContent = ''; $('exportNote').textContent = '';
+  $('sample').style.fontFamily = '';
+  setStatus(S.gray0 ? 'Reading the image…' : 'Start with a photo or a sample sheet.');
+  showImageState();
+}
+function onEdit(){ schedule(); scheduleCheckpoint(); persist(); }
+
 function loadDrawable(src, w, h){
   const MAX = 3000, k = Math.min(1, MAX / Math.max(w, h));
   const cw = Math.max(1, Math.round(w * k)), ch = Math.max(1, Math.round(h * k));
@@ -163,13 +291,14 @@ function loadDrawable(src, w, h){
   const d = g.getImageData(0, 0, cw, ch).data;
   const gray = new Uint8Array(cw * ch);
   for (let i = 0, j = 0; i < gray.length; i++, j += 4) gray[i] = (d[j]*299 + d[j+1]*587 + d[j+2]*114) / 1000 | 0;
-  S.gray0 = gray; S.w = cw; S.h = ch; S.crop = null;
+  S.gray0 = gray; S.w = cw; S.h = ch; S.crop = null; S.imgId = ++S.imgCount;
   // light-on-dark guess from the outer border
   let sum = 0, n = 0;
   for (let x = 0; x < cw; x++){ sum += gray[x] + gray[(ch-1)*cw + x]; n += 2; }
   for (let y = 0; y < ch; y++){ sum += gray[y*cw] + gray[y*cw + cw-1]; n += 2; }
   $('invert').checked = (sum / n) < 110;
   autoThreshold();
+  updateLabels();
   schedule(0);
 }
 async function loadFile(file){
@@ -178,20 +307,52 @@ async function loadFile(file){
     await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('bad image')); img.src = url; });
     loadDrawable(img, img.naturalWidth, img.naturalHeight);
     URL.revokeObjectURL(url);
+    checkpoint();
   }catch(e){ setStatus('Could not read that file as an image.', 'bad'); }
 }
-function demoSheet(){
-  const rows = ['ABCDEFGHIJKLM','NOPQRSTUVWXYZ','abcdefghijklm','nopqrstuvwxyz','0123456789'];
-  const cell = 96, rowH = 150, c = document.createElement('canvas');
+/* ------------------------------------------------------- sample sheets */
+const FAMILIES = {
+  printed: '"Times New Roman", Georgia, "DejaVu Serif", serif',
+  sans:    'Arial, Helvetica, "DejaVu Sans", sans-serif',
+  mono:    '"Courier New", Courier, "DejaVu Sans Mono", monospace',
+  photo:   '"Times New Roman", Georgia, "DejaVu Serif", serif'
+};
+const PRESETS = {
+  printed: { sheet:'printed', settings:{ smooth:2, simplify:0.3, minSpeck:12, minHole:6, cap:700, bearing:30 } },
+  sans:    { sheet:'sans',    settings:{ smooth:0, simplify:0.4, minSpeck:12, minHole:6, cap:800, bearing:30 } },
+  mono:    { sheet:'mono',    settings:{ smooth:1, simplify:0.3, minSpeck:12, minHole:6, cap:700, bearing:40 } },
+  photo:   { sheet:'photo',   settings:{ smooth:3, simplify:0.4, minSpeck:30, minHole:10, cap:700, bearing:30 } }
+};
+function makeSheet(key){
+  const rows = SHEET_ROWS, cell = 96, rowH = 150;
+  const c = document.createElement('canvas');
   c.width = cell * 13 + 40; c.height = rowH * rows.length + 30;
   const g = c.getContext('2d');
   g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
   g.fillStyle = '#111'; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
-  g.font = 'bold 80px "Times New Roman", Georgia, "DejaVu Serif", serif';
-  rows.forEach((r, ri) => [...r].forEach((ch, ci) => g.fillText(ch, 20 + cell*ci + cell/2, 25 + rowH*ri + 100)));
-  $('chars').value = rows.join('\n');
-  $('shared').checked = true;
-  loadDrawable(c, c.width, c.height);
+  g.font = `bold 80px ${FAMILIES[key]}`;
+  rows.forEach((r, ri) => [...r].forEach((ch, ci) => g.fillText(ch, 20 + cell * ci + cell / 2, 25 + rowH * ri + 100)));
+  if (key !== 'photo') return c;
+  // Imitate a phone photo: tilt the sheet, then darken the edges.
+  const p = document.createElement('canvas'); p.width = c.width; p.height = c.height;
+  const q = p.getContext('2d');
+  q.fillStyle = '#d9d6cc'; q.fillRect(0, 0, p.width, p.height);
+  q.save(); q.translate(p.width / 2, p.height / 2); q.rotate(0.035);
+  q.drawImage(c, -c.width / 2, -c.height / 2); q.restore();
+  const grad = q.createRadialGradient(p.width / 2, p.height / 2, Math.min(p.width, p.height) * 0.35,
+                                      p.width / 2, p.height / 2, Math.max(p.width, p.height) * 0.7);
+  grad.addColorStop(0, 'rgba(0,0,0,0)'); grad.addColorStop(1, 'rgba(0,0,0,0.35)');
+  q.fillStyle = grad; q.fillRect(0, 0, p.width, p.height);
+  return p;
+}
+// A preset is a starting point: it loads a sample sheet with settings tuned for that kind of picture.
+function applyPreset(key){
+  const p = PRESETS[key]; if (!p) return;
+  const sheet = makeSheet(p.sheet);
+  loadDrawable(sheet, sheet.width, sheet.height);
+  applySettings({ ...p.settings, chars: SHEET_ROWS.join('\n'), shared: true });
+  S.overrides = {};
+  onEdit(); checkpoint();
 }
 
 /* ----------------------------------------------------------- image analysis */
@@ -489,16 +650,18 @@ function makeGlyphs(info, o){
   const capLike = info.shapes.filter(s => /[\p{Lu}\p{Nd}]/u.test(s.ch)).map(s => s.maxy - s.miny);
   const ref = capLike.length ? median(capLike) : Math.max(...info.shapes.map(s => s.maxy - s.miny));
   const scale = o.cap / ref;
+  const gw = []; info.glyphWarnings = gw;   // rebuilt on every call, so warnings never pile up
   const out = new Map();
   let dup = 0;
   for (const s of info.shapes){
     const cp = s.ch.codePointAt(0);
-    if (cp > 0xFFFF){ info.warnings.push(`"${s.ch}" is outside the basic Unicode range and was skipped.`); continue; }
+    if (cp > 0xFFFF){ gw.push(`"${s.ch}" is outside the basic Unicode range and was skipped.`); continue; }
+    const side = (o.overrides && Object.hasOwn(o.overrides, s.ch)) ? o.overrides[s.ch].bearing : o.bearing;
     const by = (o.shared && base[s.line] !== undefined) ? base[s.line] : s.maxy;
     const cons = [];
     let xMin = 1e9, yMin = 1e9, xMax = -1e9, yMax = -1e9;
     for (const l of s.loops){
-      let pts = l.pts.map(p => [Math.round((p[0] - s.minx) * scale + o.bearing), Math.round((by - p[1]) * scale)]);
+      let pts = l.pts.map(p => [Math.round((p[0] - s.minx) * scale + side), Math.round((by - p[1]) * scale)]);
       // drop consecutive duplicates created by rounding
       pts = pts.filter((p, i) => { const q = pts[(i + pts.length - 1) % pts.length]; return p[0] !== q[0] || p[1] !== q[1]; });
       if (pts.length < 3) continue;
@@ -509,9 +672,9 @@ function makeGlyphs(info, o){
     }
     if (!cons.length) continue;
     if (out.has(cp)) dup++;
-    out.set(cp, { ch:s.ch, code:cp, contours:cons, xMin, yMin, xMax, yMax, adv: Math.round((s.maxx - s.minx) * scale + 2 * o.bearing), lsb: xMin });
+    out.set(cp, { ch:s.ch, code:cp, contours:cons, xMin, yMin, xMax, yMax, adv: Math.round((s.maxx - s.minx) * scale + 2 * side), lsb: xMin });
   }
-  if (dup) info.warnings.push(`${dup} character${dup > 1 ? 's were' : ' was'} listed twice; the later one was kept.`);
+  if (dup) gw.push(`${dup} character${dup > 1 ? 's were' : ' was'} listed twice; the later one was kept.`);
   return [...out.values()].sort((a, b) => a.code - b.code);
 }
 
@@ -678,16 +841,18 @@ function buildTTF(glyphs, m){
 
 /* --------------------------------------------------------------------- UI */
 function opts(){
+  const s = getSettings(), ov = {};
+  for (const ch of Object.keys(S.overrides)){
+    const v = S.overrides[ch];
+    if (v && Number.isFinite(+v.bearing)) ov[ch] = { bearing: Math.min(300, Math.max(0, +v.bearing)) };
+  }
   return {
-    thr: +$('thr').value, smooth: +$('smooth').value, simplify: +$('simplify').value,
-    minSpeck: Math.max(0, +$('minSpeck').value || 0), minHole: Math.max(0, +$('minHole').value || 0),
-    cap: Math.min(900, Math.max(100, +$('cap').value || 700)),
-    bearing: Math.min(300, Math.max(0, +$('bearing').value || 0)),
-    shared: $('shared').checked, desc: $('desc').value,
-    name: ($('name').value.trim() || 'MyTracedFont')
+    thr: s.thr, smooth: s.smooth, simplify: s.simplify,
+    minSpeck: Math.max(0, s.minSpeck), minHole: Math.max(0, s.minHole),
+    cap: Math.min(900, Math.max(100, s.cap)), bearing: Math.min(300, Math.max(0, s.bearing)),
+    shared: s.shared, desc: s.desc, name: s.name.trim() || 'MyTracedFont', overrides: ov
   };
 }
-function setStatus(msg, kind){ const s = $('status'); s.textContent = msg; s.className = 'status' + (kind ? ' ' + kind : ''); }
 
 function draw(info){
   const cv = $('view'), ctx = cv.getContext('2d');
@@ -721,25 +886,78 @@ function draw(info){
   }
 }
 
-async function showFont(buf, glyphs, name){
+async function showFont(buf){
   const fam = 'ImgFont' + (++S.fontCount);
   try{
     const ff = new FontFace(fam, buf.slice(0).buffer);
     await ff.load(); document.fonts.add(ff);
-    if (S.fam) for (const f of document.fonts) if (f.family === S.fam) document.fonts.delete(f);
+    if (S.fam) for (const f of [...document.fonts]) if (f.family.replace(/"/g, '') === S.fam) document.fonts.delete(f);
     S.fam = fam;
-  }catch(e){
-    return false;
-  }
-  $('sample').style.fontFamily = `"${fam}", system-ui`;
+  }catch(e){ return false; }
+  const css = `"${fam}", system-ui`;
+  $('sample').style.fontFamily = css;
+  for (const el of document.querySelectorAll('#glyphs .g span')) el.style.fontFamily = css;
+  return true;
+}
+
+// One input box per letter. Editing a box rebuilds the font without re-reading the image.
+function renderGlyphs(glyphs){
   const box = $('glyphs'); box.textContent = '';
   for (const g of glyphs){
-    const d = document.createElement('div'); d.className = 'g';
-    const s = document.createElement('span'); s.textContent = g.ch; s.style.fontFamily = `"${fam}", system-ui`;
-    const sm = document.createElement('small'); sm.textContent = g.ch;
-    d.append(s, sm); box.append(d);
+    const card = document.createElement('div'); card.className = 'g';
+    const big = document.createElement('span'); big.textContent = g.ch;
+    if (S.fam) big.style.fontFamily = `"${S.fam}", system-ui`;
+    const cap = document.createElement('small'); cap.textContent = g.ch;
+    const inp = document.createElement('input');
+    inp.type = 'number'; inp.min = 0; inp.max = 300; inp.step = 1;
+    inp.placeholder = String(getSettings().bearing);
+    inp.title = `Side spacing for ${g.ch} (blank uses the general value)`;
+    inp.setAttribute('aria-label', `Side spacing for ${g.ch}`);
+    const cur = S.overrides[g.ch]; inp.value = cur ? cur.bearing : '';
+    inp.addEventListener('input', () => {
+      const v = inp.value.trim();
+      if (v === '') delete S.overrides[g.ch];
+      else if (Number.isFinite(+v)) S.overrides[g.ch] = { bearing: Math.min(300, Math.max(0, +v)) };
+      else return;
+      persist(); scheduleCheckpoint(); scheduleRebuild();
+    });
+    card.append(big, cap, inp); box.append(card);
   }
-  return true;
+}
+function scheduleRebuild(){ clearTimeout(S.rbTimer); S.rbTimer = setTimeout(() => rebuild(false), 150); }
+
+async function rebuild(withGrid){
+  const info = S.info;
+  if (!info || info.error) return;
+  const id = ++S.buildId;
+  S.fontBuf = null; setExportsEnabled(false);
+  try{
+    const o = opts();
+    const glyphs = makeGlyphs(info, o);
+    if (!glyphs.length){ setStatus('No outlines could be traced. Try changing the darkness cut-off.', 'bad'); return; }
+    let top = 800, bottom = -200;
+    for (const g of glyphs){ top = Math.max(top, g.yMax); bottom = Math.min(bottom, g.yMin); }
+    const xg = glyphs.find(g => g.ch === 'x');
+    const font = buildTTF(glyphs, {
+      family: o.name, upm: 1000,
+      ascent: Math.ceil(top / 10) * 10 + 20, descent: Math.ceil(-bottom / 10) * 10 + 20,
+      space: Math.round(o.cap * 0.43), capH: o.cap, xH: xg ? xg.yMax : Math.round(o.cap * 0.5)
+    });
+    if (id !== S.buildId) return;
+    const ok = await showFont(font);
+    if (id !== S.buildId) return;
+    if (!ok){ setStatus('The font was built but your browser rejected it. Please report this image so it can be fixed.', 'bad'); return; }
+    S.fontBuf = font; S.glyphs = glyphs;
+    setExportsEnabled(true);
+    $('dlnote').textContent = `${o.name}.ttf · ${glyphs.length} glyphs · ${(font.length / 1024).toFixed(1)} KB`;
+    if (withGrid) renderGlyphs(glyphs);
+    const warnings = [...info.warnings, ...(info.glyphWarnings || [])];
+    setStatus(`Font ready: ${glyphs.length} characters traced from ${info.N} shapes.` + (warnings.length ? ' ' + warnings.join(' ') : ''),
+              warnings.length ? 'warn' : 'ok');
+  }catch(e){
+    console.error(e);
+    setStatus('Something went wrong while building the font: ' + e.message, 'bad');
+  }
 }
 
 async function run(){
@@ -751,60 +969,124 @@ async function run(){
   if (id !== S.runId) return;
   $('empty').hidden = true; $('view').hidden = false; $('clearCrop').hidden = !S.crop;
   draw(info); S.info = info; window.__info = info;
-  $('download').disabled = true; S.fontBuf = null; window.__font = null;
+  S.fontBuf = null; setExportsEnabled(false);
   if (info.error){
     const more = info.found >= info.N ? '' : ' Try a different darkness cut-off, or check that every character is listed.';
-    setStatus(info.error + more, 'bad'); $('dlnote').textContent = 'Fix the detection to build the font.'; return;
+    setStatus(info.error + more, 'bad');
+    $('dlnote').textContent = 'Fix the detection to build the font.';
+    $('glyphs').textContent = '';
+    return;
   }
-  const glyphs = makeGlyphs(info, o);
-  if (!glyphs.length){ setStatus('No outlines could be traced. Try changing the darkness cut-off.', 'bad'); return; }
-  const upm = 1000;
-  let top = 800, bottom = -200;
-  for (const g of glyphs){ top = Math.max(top, g.yMax); bottom = Math.min(bottom, g.yMin); }
-  const xg = glyphs.find(g => g.ch === 'x');
-  const font = buildTTF(glyphs, {
-    family: o.name, upm,
-    ascent: Math.ceil(top / 10) * 10 + 20, descent: Math.ceil(-bottom / 10) * 10 + 20,
-    space: Math.round(o.cap * 0.43), capH: o.cap, xH: xg ? xg.yMax : Math.round(o.cap * 0.5)
-  });
-  if (id !== S.runId) return;
-  const ok = await showFont(font, glyphs, o.name);
-  if (id !== S.runId) return;
-  if (!ok){ setStatus('The font was built but your browser rejected it. Please report this image so it can be fixed.', 'bad'); return; }
-  S.fontBuf = font; window.__font = font;
-  $('download').disabled = false;
-  $('dlnote').textContent = `${o.name}.ttf · ${glyphs.length} glyphs · ${(font.length / 1024).toFixed(1)} KB`;
-  const warn = info.warnings.length ? ' ' + info.warnings.join(' ') : '';
-  setStatus(`Font ready: ${glyphs.length} characters traced from ${info.N} shapes.${warn}`, info.warnings.length ? 'warn' : 'ok');
+  await rebuild(true);
 }
 function schedule(ms){ clearTimeout(S.timer); S.timer = setTimeout(run, ms === undefined ? 250 : ms); }
 
+/* ------------------------------------------------------------ exports */
+function exportName(){ return getSettings().name.replace(/[^A-Za-z0-9._-]+/g, '') || 'font'; }
+function note(msg){ $('exportNote').textContent = msg; }
+function download(bytes, fname, type){
+  const url = URL.createObjectURL(new Blob([bytes], { type }));
+  const a = document.createElement('a'); a.href = url; a.download = fname;
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+async function deflate(bytes){
+  const cs = new CompressionStream('deflate');
+  const writer = cs.writable.getWriter();
+  const [out] = await Promise.all([
+    new Response(cs.readable).arrayBuffer(),
+    (async () => { await writer.write(bytes); await writer.close(); })()
+  ]);
+  return new Uint8Array(out);
+}
+// Converts a TrueType file to WOFF 1.0: same tables, each one zlib-compressed when that makes it smaller.
+async function toWOFF(ttf){
+  const dv = new DataView(ttf.buffer, ttf.byteOffset, ttf.byteLength);
+  const flavor = dv.getUint32(0), n = dv.getUint16(4);
+  const tables = [];
+  for (let i = 0; i < n; i++){
+    const r = 12 + i * 16;
+    const tag = dv.getUint32(r), checksum = dv.getUint32(r + 4), off = dv.getUint32(r + 8), len = dv.getUint32(r + 12);
+    const raw = ttf.subarray(off, off + len);
+    const z = len > 0 ? await deflate(raw) : raw;
+    tables.push({ tag, checksum, len, data: z.length < raw.length ? z : raw });
+  }
+  tables.sort((a, b) => a.tag - b.tag);
+  const headerSize = 44, dirSize = n * 20;
+  let pos = headerSize + dirSize;
+  const offsets = tables.map(t => { const at = pos; pos += (t.data.length + 3) & ~3; return at; });
+  const out = new Uint8Array(pos), w = new DataView(out.buffer);
+  w.setUint32(0, 0x774F4646);            // 'wOFF'
+  w.setUint32(4, flavor);
+  w.setUint32(8, pos);
+  w.setUint16(12, n); w.setUint16(14, 0);
+  w.setUint32(16, ttf.length);           // size of the uncompressed sfnt
+  w.setUint16(20, 1); w.setUint16(22, 0);
+  tables.forEach((t, i) => {
+    const r = headerSize + i * 20;
+    w.setUint32(r, t.tag); w.setUint32(r + 4, offsets[i]); w.setUint32(r + 8, t.data.length);
+    w.setUint32(r + 12, t.len); w.setUint32(r + 16, t.checksum);
+    out.set(t.data, offsets[i]);
+  });
+  return out;
+}
+function toBase64(bytes){
+  let s = ''; const CH = 0x8000;
+  for (let i = 0; i < bytes.length; i += CH) s += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+  return btoa(s);
+}
+async function copyCss(){
+  if (!S.fontBuf) return;
+  const woff = await toWOFF(S.fontBuf);
+  const name = exportName();
+  const css = `@font-face {\n  font-family: "${name}";\n  src: url(data:font/woff;base64,${toBase64(woff)}) format("woff");\n}\n`;
+  try{
+    await navigator.clipboard.writeText(css);
+    note('CSS copied. Paste it into your stylesheet.');
+  }catch(e){
+    const ta = document.createElement('textarea'); ta.value = css; ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.append(ta); ta.select();
+    const ok = document.execCommand('copy'); ta.remove();
+    note(ok ? 'CSS copied. Paste it into your stylesheet.' : 'Copying was blocked. Use Download .woff instead.');
+  }
+}
+
 /* events */
-$('file').addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+$('file').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (f) loadFile(f);
+  e.target.value = '';
+});
 const drop = $('drop');
 drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
 drop.addEventListener('dragleave', () => drop.classList.remove('over'));
 drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
 drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); $('file').click(); } });
-$('demo').addEventListener('click', demoSheet);
-$('auto').addEventListener('click', () => { autoThreshold(); schedule(0); });
-$('clearCrop').addEventListener('click', () => { S.crop = null; schedule(0); });
+$('presets').addEventListener('change', e => { const k = e.target.value; e.target.value = ''; if (k) applyPreset(k); });
+$('auto').addEventListener('click', () => { autoThreshold(); updateLabels(); onEdit(); schedule(0); });
+$('clearCrop').addEventListener('click', () => { S.crop = null; schedule(0); scheduleCheckpoint(); });
+$('undo').addEventListener('click', undo);
+$('clear').addEventListener('click', clearAll);
 for (const id of ['thr', 'smooth', 'simplify']){
-  $(id).addEventListener('input', () => {
-    $(id + 'Val').textContent = id === 'simplify' ? (+$(id).value).toFixed(2) : $(id).value; schedule();
-  });
+  $(id).addEventListener('input', () => { updateLabels(); onEdit(); });
 }
-$('invert').addEventListener('change', () => { autoThreshold(); schedule(0); });
+$('invert').addEventListener('change', () => { autoThreshold(); updateLabels(); onEdit(); schedule(0); });
 for (const id of ['chars', 'minSpeck', 'minHole', 'cap', 'bearing', 'shared', 'desc', 'name']){
-  $(id).addEventListener('input', () => schedule());
+  $(id).addEventListener('input', () => onEdit());
 }
-$('download').addEventListener('click', () => {
+$('sampleText').addEventListener('input', () => { updateLabels(); persist(); });
+$('download').addEventListener('click', () => { if (S.fontBuf) download(S.fontBuf, exportName() + '.ttf', 'font/ttf'); });
+$('downloadWoff').addEventListener('click', async () => {
   if (!S.fontBuf) return;
-  const o = opts(), fn = (o.name.replace(/[^A-Za-z0-9._-]+/g, '') || 'font') + '.ttf';
-  const url = URL.createObjectURL(new Blob([S.fontBuf], { type:'font/ttf' }));
-  const a = document.createElement('a'); a.href = url; a.download = fn;
-  document.body.append(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  const woff = await toWOFF(S.fontBuf);
+  download(woff, exportName() + '.woff', 'font/woff');
+  note(`WOFF is ${(woff.length / 1024).toFixed(1)} KB, down from ${(S.fontBuf.length / 1024).toFixed(1)} KB.`);
+});
+$('copyCss').addEventListener('click', copyCss);
+document.addEventListener('keydown', e => {
+  if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== 'z') return;
+  if (e.target.matches && e.target.matches('textarea, input[type=text], input[type=number]')) return;
+  e.preventDefault(); undo();
 });
 
 // drag a box on the picture to limit detection to that area
@@ -819,12 +1101,20 @@ $('download').addEventListener('click', () => {
                x1: Math.min(S.w, Math.max(start[0], p[0])), y1: Math.min(S.h, Math.max(start[1], p[1])) };
     draw(S.info);
   });
-  cv.addEventListener('pointerup', e => {
+  cv.addEventListener('pointerup', () => {
     if (!start) return; start = null;
     if (S.crop && (S.crop.x1 - S.crop.x0 < 8 || S.crop.y1 - S.crop.y0 < 8)) S.crop = null;
-    schedule(0);
+    schedule(0); scheduleCheckpoint();
   });
 })();
+
+/* start-up: restore saved settings before any image is loaded */
+restore();
+updateLabels();
+resetResults();
+S.lastSnap = takeSnap(); S.lastSig = currentSig();
+updateButtons();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
 </script>
 </body>
